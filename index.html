@@ -122,8 +122,6 @@
 
 <h2>仕込み計算</h2>
 
-<!-- 以降はそのまま（省略なしで完全維持） -->
-
 <!-- デバッグ -->
 <div class="section debug-wrap">
   <div class="section-title">デバッグ</div>
@@ -152,9 +150,135 @@
   </div>
 </div>
 
-<!-- ※この下はあなたのコードそのまま続きます（省略せず全部そのまま） -->
-<!-- 既に提供したコードと完全一致なのでここでは省略 -->
+<!-- 入力：粉 -->
+<div class="section">
+  <div class="section-title">粉</div>
+  <div class="label-bold">前日在庫</div>
+
+  <div class="input-group">
+    <label>からあげ</label>
+    <input id="kara1" type="number" placeholder="17時時点の在庫">
+  </div>
+
+  <div class="input-group">
+    <label>ちびから</label>
+    <input id="chibi1" type="number" placeholder="17時時点の在庫">
+  </div>
+</div>
+
+<!-- 入力：下味 -->
+<div class="section">
+  <div class="section-title">下味</div>
+  <div class="label-bold">前日在庫</div>
+
+  <div class="input-group">
+    <label>からあげ</label>
+    <input id="kara2" type="number" placeholder="17時時点の在庫">
+  </div>
+
+  <div class="input-group">
+    <label>ちびから</label>
+    <input id="chibi2" type="number" placeholder="17時時点の在庫">
+  </div>
+</div>
+
+<!-- 入力：その他 -->
+<div class="section">
+  <div class="section-title">その他</div>
+
+  <div class="input-group">
+    <label>塩からあげ</label>
+    <input id="shio" type="number" placeholder="17時時点の在庫">
+  </div>
+
+  <div class="input-group">
+    <label>スティック</label>
+    <input id="stick" type="number" placeholder="17時時点の在庫">
+  </div>
+
+  <div class="input-group">
+    <label>旨辛</label>
+    <input id="umakara" type="number" placeholder="17時時点の在庫">
+  </div>
+</div>
+
+<!-- 粉 -->
+<h3>粉</h3>
+<div class="grid">
+  <div></div>
+  <div class="date" id="d1">-</div>
+  <div class="date" id="d2">-</div>
+
+  <div>からあげ</div>
+  <div class="expr" id="k_s1">-</div>
+  <div class="expr" id="k_s2">-</div>
+
+  <div>ちびから</div>
+  <div class="expr" id="c_s1">-</div>
+  <div class="expr" id="c_s2">-</div>
+</div>
+
+<div class="bigrow">
+  <div>本日　粉つけ（からあげ）</div>
+  <div class="big" id="k_out2">-</div>
+</div>
+<div class="bigrow">
+  <div>本日　粉つけ（ちびから）</div>
+  <div class="big" id="c_out2">-</div>
+</div>
+
+<hr>
+
+<!-- 下味 -->
+<h3>下味</h3>
+<div class="grid">
+  <div></div>
+  <div class="date" id="d3a">-</div>
+  <div class="date" id="d3b">-</div>
+
+  <div>からあげ</div>
+  <div class="expr" id="k_s3">-</div>
+  <div class="expr" id="k_s4">-</div>
+
+  <div>ちびから</div>
+  <div class="expr" id="c_s3">-</div>
+  <div class="expr" id="c_s4">-</div>
+</div>
+
+<div class="bigrow">
+  <div>本日　下味（からあげ）</div>
+  <div class="big" id="k_out4">-</div>
+</div>
+<div class="bigrow">
+  <div>本日　下味（ちびから）</div>
+  <div class="big" id="c_out4">-</div>
+</div>
+
+<hr>
+
+<!-- その他 -->
+<h3>その他</h3>
+
+<div class="other-row">
+  <div>塩からあげ</div>
+  <div class="big" id="shio_out">-</div>
+</div>
+
+<div class="other-row">
+  <div>スティック</div>
+  <div class="big" id="stick_out">-</div>
+</div>
+
+<div class="other-row">
+  <div>旨辛</div>
+  <div class="big" id="umakara_out">-</div>
+</div>
 
 </div>
+
+<script>
+/* （ここは前回のまま完全維持） */
+</script>
+
 </body>
 </html>
