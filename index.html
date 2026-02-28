@@ -210,16 +210,8 @@
 const API = "https://date.nager.at/api/v3/PublicHolidays/";
 
 /* kg表示ヘルパ */
-function kgNum(n){
-  return `${n}kg`;
-}
-function kgOrDash(v){
-  return (v === "-" || v === undefined || v === null) ? "-" : `${v}kg`;
-}
-function kgPair(a, b){
-  // a（b）に両方kg
-  return `${a}kg（${b}kg）`;
-}
+function kgNum(n){ return `${n}kg`; }
+function kgPair(a, b){ return `${a}kg（${b}kg）`; }
 
 function getDate(offset){
   const d = new Date(Date.now() + offset * 86400000);
@@ -290,8 +282,8 @@ function roundTo4Unit(n){
 }
 
 /* 粉/下味の共通計算
-   - ②（粉つけ）：kgを付ける
-   - ④（下味）：丸め後（丸め前）どちらもkg
+   - 粉側（入力1）は「入力-予定値」を使う
+   - 下味側（入力2）は「予定値を引かず入力そのまま」を使う  ★今回変更
 */
 function calc(a,b,f1,f2,f3,p1,p3,s1,s2,s3,s4,o2,o4){
   if(!a){
@@ -304,6 +296,7 @@ function calc(a,b,f1,f2,f3,p1,p3,s1,s2,s3,s4,o2,o4){
     return;
   }
 
+  // 粉（入力①）は従来通り：入力-予定値
   const aAdj = a - p1;
   const step1 = aAdj - f1;
   const step2 = f2 - step1;
@@ -322,7 +315,9 @@ function calc(a,b,f1,f2,f3,p1,p3,s1,s2,s3,s4,o2,o4){
     return;
   }
 
-  const bAdj = b - p3;
+  // ★下味（入力②）は変更：予定値を引かない（入力そのまま）
+  const bAdj = b;
+
   const step3 = bAdj - step2;
   const step4 = f3 - step3;
 
@@ -333,24 +328,26 @@ function calc(a,b,f1,f2,f3,p1,p3,s1,s2,s3,s4,o2,o4){
   o4.textContent = kgPair(rounded, step4);
 }
 
-/* スティック変換 */
+/* スティック変換（元ルール） */
 function convertStick(n){
   if(n <= 3) return 12;
   if(n <= 10) return 6;
   return 0;
 }
 
-/* スティック計算（変換後（元））→ どちらもkg */
+/* スティック計算（変換後（元））→ どちらもkg
+   raw がマイナスなら converted=18
+*/
 function calcStick(){
   if(!stick.value){ stick_out.textContent="-"; return; }
   const x = Number(stick.value);
   if(!Number.isFinite(x)){ stick_out.textContent="-"; return; }
 
-  const plan = (isWeekend(d0) || isHoliday(d0)) ? 6 : 3;     // 今日
-  const fixed = (isWeekend(dN) || isHoliday(dN)) ? 12 : 6;   // 翌日
+  const plan  = (isWeekend(d0) || isHoliday(d0)) ? 6 : 3;     // 今日
+  const fixed = (isWeekend(dN) || isHoliday(dN)) ? 12 : 6;    // 翌日
 
   const raw = (x - plan) - fixed;
-  const converted = convertStick(raw);
+  const converted = (raw < 0) ? 18 : convertStick(raw);
 
   stick_out.textContent = kgPair(converted, raw);
 }
@@ -387,7 +384,7 @@ function update(){
     k_out2, k_out4
   );
 
-  // ちびから（粉/下味）  ←★ここが「答え表示されない」の原因になりやすいので必ず更新
+  // ちびから（粉/下味）
   calc(
     chibi1.value, chibi2.value,
     fc(d1), fc(d2), fc(d3),
