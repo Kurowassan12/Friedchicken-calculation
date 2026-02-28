@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>仕込み計算</title>
+
+<style>
+  body { font-family: system-ui; margin: 20px; }
+  .card { max-width: 860px; margin: auto; padding: 16px; border: 1px solid #ddd; border-radius: 12px; }
+
+  h3 { margin: 18px 0 8px; }
+
+  /* 途中式の表（列＝日付、行＝からあげ/ちびから） */
+  .grid {
+    display: grid;
+    grid-template-columns: 120px 1fr 1fr;
+    gap: 8px 12px;
+    align-items: center;
+  }
+
+  .expr { text-align: right; font-weight: bold; }
+
+  .date {
+    font-size: 12px;
+    border: 1px solid #ddd;
+    padding: 2px 8px;
+    border-radius: 999px;
+    text-align: center;
+  }
+
+  .bigrow {
+    display:flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-top: 1px solid #eee;
+  }
+
+  .big { font-size: 22px; font-weight: bold; }
+
+  /* 入力UI（枠） */
+  .section {
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+  }
+
+  .section-title {
+    font-weight: bold;
+    margin-bottom: 6px;
+    font-size: 18px;
+  }
+
+  .label-bold { font-weight: bold; margin-bottom: 6px; }
+
+  .input-group { margin-bottom: 10px; }
+  .input-group label { display: block; font-size: 14px; margin-bottom: 2px; }
+
+  .input-group input {
+    width: 100%;
+    max-width: 250px;
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+  }
+
+  .other-row{
+    display:flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-top: 1px solid #eee;
+  }
+</style>
+</head>
+
+<body>
+<div class="card">
+
+<h2>仕込み計算</h2>
+
+<!-- 入力：粉 -->
+<div class="section">
+  <div class="section-title">粉</div>
+  <div class="label-bold">前日在庫</div>
+
+  <div class="input-group">
+    <label>からあげ</label>
+    <input id="kara1" type="number" placeholder="17時時点の在庫">
+  </div>
+
+  <div class="input-group">
+    <label>ちびから</label>
+    <input id="chibi1" type="number" placeholder="17時時点の在庫">
+  </div>
+</div>
+
+<!-- 入力：下味 -->
+<div class="section">
+  <div class="section-title">下味</div>
+  <div class="label-bold">前日在庫</div>
+
+  <div class="input-group">
+    <label>からあげ</label>
+    <input id="kara2" type="number" placeholder="17時時点の在庫">
+  </div>
+
+  <div class="input-group">
+    <label>ちびから</label>
+    <input id="chibi2" type="number" placeholder="17時時点の在庫">
+  </div>
+</div>
+
+<!-- 入力：その他 -->
+<div class="section">
+  <div class="section-title">その他</div>
+
+  <div class="input-group">
+    <label>塩からあげ</label>
+    <input id="shio" type="number" placeholder="17時時点の在庫">
+  </div>
+
+  <div class="input-group">
+    <label>スティック</label>
+    <input id="stick" type="number" placeholder="17時時点の在庫">
+  </div>
+
+  <div class="input-group">
+    <label>旨辛</label>
+    <input id="umakara" type="number" placeholder="17時時点の在庫">
+  </div>
+</div>
+
+<!-- 粉 -->
+<h3>粉</h3>
+<div class="grid">
+  <div></div>
+  <div class="date" id="d1">-</div>
+  <div class="date" id="d2">-</div>
+
+  <div>からあげ</div>
+  <div class="expr" id="k_s1">-</div>
+  <div class="expr" id="k_s2">-</div>
+
+  <div>ちびから</div>
+  <div class="expr" id="c_s1">-</div>
+  <div class="expr" id="c_s2">-</div>
+</div>
+
+<div class="bigrow">
+  <div>本日　粉つけ（からあげ）</div>
+  <div class="big" id="k_out2">-</div>
+</div>
+<div class="bigrow">
+  <div>本日　粉つけ（ちびから）</div>
+  <div class="big" id="c_out2">-</div>
+</div>
+
+<hr>
+
+<!-- 下味 -->
+<h3>下味</h3>
+<div class="grid">
+  <div></div>
+  <div class="date" id="d3a">-</div>
+  <div class="date" id="d3b">-</div>
+
+  <div>からあげ</div>
+  <div class="expr" id="k_s3">-</div>
+  <div class="expr" id="k_s4">-</div>
+
+  <div>ちびから</div>
+  <div class="expr" id="c_s3">-</div>
+  <div class="expr" id="c_s4">-</div>
+</div>
+
+<div class="bigrow">
+  <div>本日　下味（からあげ）</div>
+  <div class="big" id="k_out4">-</div>
+</div>
+<div class="bigrow">
+  <div>本日　下味（ちびから）</div>
+  <div class="big" id="c_out4">-</div>
+</div>
+
+<hr>
+
+<!-- その他 -->
+<h3>その他</h3>
+
+<div class="other-row">
+  <div>塩からあげ</div>
+  <div class="big" id="shio_out">-</div>
+</div>
+
+<div class="other-row">
+  <div>スティック</div>
+  <div class="big" id="stick_out">-</div>
+</div>
+
+<div class="other-row">
+  <div>旨辛</div>
+  <div class="big" id="umakara_out">-</div>
+</div>
+
+</div>
+
+<script>
+const API = "https://date.nager.at/api/v3/PublicHolidays/";
+
+/* kg表示ヘルパ */
+function kgNum(n){
+  return `${n}kg`;
+}
+function kgOrDash(v){
+  return (v === "-" || v === undefined || v === null) ? "-" : `${v}kg`;
+}
+function kgPair(a, b){
+  // a（b）に両方kg
+  return `${a}kg（${b}kg）`;
+}
+
+function getDate(offset){
+  const d = new Date(Date.now() + offset * 86400000);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+function format(d){
+  const w = ["日","月","火","水","木","金","土"];
+  return `${d.getMonth()+1}/${d.getDate()}(${w[d.getDay()]})`;
+}
+
+/* 日付（粉/下味） */
+const d1 = getDate(1); // 明日
+const d2 = getDate(2); // 明後日
+const d3 = getDate(3); // 明々後日
+
+document.getElementById("d1").textContent = format(d1);
+document.getElementById("d2").textContent = format(d2);
+document.getElementById("d3a").textContent = format(d3);
+document.getElementById("d3b").textContent = format(d3);
+
+/* スティック用（日付判定） */
+const d0 = getDate(0); // 今日（予定値）
+const dN = getDate(1); // 翌日（固定値）
+
+const holidays = new Set();
+let ready = false;
+
+async function load(years){
+  for(const y of years){
+    const res = await fetch(API + y + "/JP");
+    const data = await res.json();
+    data.forEach(v => holidays.add(v.date));
+  }
+  ready = true;
+}
+
+function isHoliday(d){
+  return ready && holidays.has(d.toISOString().slice(0,10));
+}
+function isWeekend(d){
+  const day = d.getDay();
+  return day === 0 || day === 6;
+}
+
+/* 固定値（からあげ/ちびから） */
+function fk(d){ return (isWeekend(d)||isHoliday(d)) ? 24 : 14; } // からあげ
+function fc(d){ return (isWeekend(d)||isHoliday(d)) ? 12 : 6; }  // ちびから
+
+/* 予定値（入力値から引く） */
+function pk(d){ return (isWeekend(d)||isHoliday(d)) ? 8 : 4; } // からあげ
+function pc(d){ return (isWeekend(d)||isHoliday(d)) ? 4 : 2; } // ちびから
+
+/* 下味（④）丸め：40まで */
+function roundTo4Unit(n){
+  if(n <= 0) return 0;
+  if(n <= 2) return 0;
+  if(n <= 5) return 4;
+  if(n <= 9) return 8;
+  if(n <= 13) return 12;
+  if(n <= 17) return 16;
+  if(n <= 21) return 20;
+  if(n <= 25) return 24;
+  if(n <= 29) return 28;
+  if(n <= 33) return 32;
+  if(n <= 37) return 36;
+  if(n <= 41) return 40;
+  return n;
+}
+
+/* 粉/下味の共通計算
+   - ②（粉つけ）：kgを付ける
+   - ④（下味）：丸め後（丸め前）どちらもkg
+*/
+function calc(a,b,f1,f2,f3,p1,p3,s1,s2,s3,s4,o2,o4){
+  if(!a){
+    s1.textContent=s2.textContent=s3.textContent=s4.textContent=o2.textContent=o4.textContent="-";
+    return;
+  }
+  a = Number(a);
+  if(!Number.isFinite(a)){
+    s1.textContent=s2.textContent=s3.textContent=s4.textContent=o2.textContent=o4.textContent="-";
+    return;
+  }
+
+  const aAdj = a - p1;
+  const step1 = aAdj - f1;
+  const step2 = f2 - step1;
+
+  s1.textContent = `${aAdj}-${f1}=${step1}`;
+  s2.textContent = `${f2}-${step1}=${step2}`;
+  o2.textContent = kgNum(step2);
+
+  if(!b){
+    s3.textContent=s4.textContent=o4.textContent="-";
+    return;
+  }
+  b = Number(b);
+  if(!Number.isFinite(b)){
+    s3.textContent=s4.textContent=o4.textContent="-";
+    return;
+  }
+
+  const bAdj = b - p3;
+  const step3 = bAdj - step2;
+  const step4 = f3 - step3;
+
+  s3.textContent = `${bAdj}-${step2}=${step3}`;
+  s4.textContent = `${f3}-${step3}=${step4}`;
+
+  const rounded = roundTo4Unit(step4);
+  o4.textContent = kgPair(rounded, step4);
+}
+
+/* スティック変換 */
+function convertStick(n){
+  if(n <= 3) return 12;
+  if(n <= 10) return 6;
+  return 0;
+}
+
+/* スティック計算（変換後（元））→ どちらもkg */
+function calcStick(){
+  if(!stick.value){ stick_out.textContent="-"; return; }
+  const x = Number(stick.value);
+  if(!Number.isFinite(x)){ stick_out.textContent="-"; return; }
+
+  const plan = (isWeekend(d0) || isHoliday(d0)) ? 6 : 3;     // 今日
+  const fixed = (isWeekend(dN) || isHoliday(dN)) ? 12 : 6;   // 翌日
+
+  const raw = (x - plan) - fixed;
+  const converted = convertStick(raw);
+
+  stick_out.textContent = kgPair(converted, raw);
+}
+
+/* 塩からあげ（元は出さない）→ kg */
+function calcShio(){
+  if(!shio.value){ shio_out.textContent="-"; return; }
+  const x = Number(shio.value);
+  if(!Number.isFinite(x)){ shio_out.textContent="-"; return; }
+
+  const raw = x - 4;
+  const ans = (raw <= 4) ? 4 : 0;
+  shio_out.textContent = kgNum(ans);
+}
+
+/* 旨辛（元は出さない）→ kg */
+function calcUmakara(){
+  if(!umakara.value){ umakara_out.textContent="-"; return; }
+  const x = Number(umakara.value);
+  if(!Number.isFinite(x)){ umakara_out.textContent="-"; return; }
+
+  const raw = x - 2;
+  const ans = (raw <= 2) ? 2 : 0;
+  umakara_out.textContent = kgNum(ans);
+}
+
+function update(){
+  // からあげ（粉/下味）
+  calc(
+    kara1.value, kara2.value,
+    fk(d1), fk(d2), fk(d3),
+    pk(d1), pk(d3),
+    k_s1, k_s2, k_s3, k_s4,
+    k_out2, k_out4
+  );
+
+  // ちびから（粉/下味）  ←★ここが「答え表示されない」の原因になりやすいので必ず更新
+  calc(
+    chibi1.value, chibi2.value,
+    fc(d1), fc(d2), fc(d3),
+    pc(d1), pc(d3),
+    c_s1, c_s2, c_s3, c_s4,
+    c_out2, c_out4
+  );
+
+  calcShio();
+  calcStick();
+  calcUmakara();
+}
+
+document.querySelectorAll("input").forEach(i => i.addEventListener("input", update));
+
+(async()=>{
+  await load([d0.getFullYear(), dN.getFullYear(), d1.getFullYear(), d2.getFullYear(), d3.getFullYear()]);
+  update();
+})();
+</script>
+
+</body>
+</html>
