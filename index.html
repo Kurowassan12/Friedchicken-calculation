@@ -11,7 +11,6 @@
 
   h3 { margin: 18px 0 8px; }
 
-  /* 途中式の表（列＝日付、行＝からあげ/ちびから） */
   .grid {
     display: grid;
     grid-template-columns: 120px 1fr 1fr;
@@ -38,7 +37,6 @@
 
   .big { font-size: 22px; font-weight: bold; }
 
-  /* 入力UI（枠） */
   .section {
     border: 1px solid #ccc;
     padding: 10px;
@@ -73,7 +71,7 @@
     border-top: 1px solid #eee;
   }
 
-  /* デバッグUI（追加） */
+  /* デバッグUI */
   .debug-wrap { margin-bottom: 12px; }
   .debug-row {
     display:flex;
@@ -98,6 +96,24 @@
   }
   .muted { font-size: 12px; color: #666; }
   .hidden { display:none; }
+
+  /* 自動設定日付の表示（基準日の下） */
+  .debug-preview {
+    margin-top: 8px;
+    font-size: 14px;
+  }
+  .debug-preview .row{
+    display:flex;
+    gap: 10px;
+    padding: 2px 0;
+  }
+  .debug-preview .k{
+    width: 90px;
+    color: #444;
+  }
+  .debug-preview .v{
+    font-weight: 600;
+  }
 </style>
 </head>
 
@@ -106,7 +122,7 @@
 
 <h2>仕込み計算</h2>
 
-<!-- ★デバッグモード（追加） -->
+<!-- デバッグ -->
 <div class="section debug-wrap">
   <div class="section-title">デバッグ</div>
 
@@ -115,25 +131,22 @@
       <input id="debugToggle" type="checkbox">
       デバッグモード
     </label>
-    <span class="muted">ONのとき日付を手動設定できます（祝日判定も再取得）</span>
+    <span class="muted">ONのとき「本日（基準日）」を入れると、明日/明後日/明々後日を自動設定します</span>
   </div>
 
   <div id="debugPanel" class="hidden">
     <div class="debug-grid">
-      <label for="dbg_today">今日（スティック予定値用）</label>
-      <input id="dbg_today" type="date">
+      <label for="dbg_base">本日（基準日）</label>
+      <div>
+        <input id="dbg_base" type="date">
 
-      <label for="dbg_next">翌日（スティック固定値用）</label>
-      <input id="dbg_next" type="date">
-
-      <label for="dbg_d1">明日（粉：日付1）</label>
-      <input id="dbg_d1" type="date">
-
-      <label for="dbg_d2">明後日（粉：日付2）</label>
-      <input id="dbg_d2" type="date">
-
-      <label for="dbg_d3">明々後日（下味：日付）</label>
-      <input id="dbg_d3" type="date">
+        <!-- 自動設定された日付の表示（翌日は明日と同じなので表示しない） -->
+        <div class="debug-preview">
+          <div class="row"><div class="k">明日</div><div class="v" id="dbg_show_d1">-</div></div>
+          <div class="row"><div class="k">明後日</div><div class="v" id="dbg_show_d2">-</div></div>
+          <div class="row"><div class="k">明々後日</div><div class="v" id="dbg_show_d3">-</div></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -272,33 +285,32 @@ function kgNum(n){ return `${n}kg`; }
 function kgPair(a, b){ return `${a}kg（${b}kg）`; }
 
 /* 日付ユーティリティ */
-function dateOnly(d){
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+function dateOnly(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+function addDays(d, days){
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  x.setDate(x.getDate() + days);
+  return dateOnly(x);
 }
-function getDateFromNow(offset){
-  return dateOnly(new Date(Date.now() + offset * 86400000));
-}
+function getDateFromNow(offset){ return addDays(new Date(), offset); }
+
 function format(d){
   const w = ["日","月","火","水","木","金","土"];
   return `${d.getMonth()+1}/${d.getDate()}(${w[d.getDay()]})`;
 }
-function toISODate(d){
-  return d.toISOString().slice(0,10);
-}
+function toISODate(d){ return d.toISOString().slice(0,10); }
 function parseDateInput(v){
-  // v: "YYYY-MM-DD"
   if(!v) return null;
   const [y,m,day] = v.split("-").map(Number);
   if(!y || !m || !day) return null;
   return new Date(y, m-1, day);
 }
 
-/* ★可変日付（通常/デバッグで切替） */
-let d0 = getDateFromNow(0); // 今日（スティック予定値）
-let dN = getDateFromNow(1); // 翌日（スティック固定値）
-let d1 = getDateFromNow(1); // 明日
-let d2 = getDateFromNow(2); // 明後日
-let d3 = getDateFromNow(3); // 明々後日
+/* 可変日付（通常/デバッグで切替） */
+let d0 = dateOnly(getDateFromNow(0)); // 今日（スティック予定値）
+let dN = dateOnly(getDateFromNow(1)); // 翌日（スティック固定値） ※表示はしないが計算で使う
+let d1 = dateOnly(getDateFromNow(1)); // 明日
+let d2 = dateOnly(getDateFromNow(2)); // 明後日
+let d3 = dateOnly(getDateFromNow(3)); // 明々後日
 
 function applyDatesToUI(){
   document.getElementById("d1").textContent  = format(d1);
@@ -307,15 +319,20 @@ function applyDatesToUI(){
   document.getElementById("d3b").textContent = format(d3);
 }
 
-/* 祝日セット（年が変わったら再取得） */
+/* デバッグ欄に自動設定日付を表示（翌日は表示しない） */
+function applyDebugPreview(){
+  dbg_show_d1.textContent = format(d1);
+  dbg_show_d2.textContent = format(d2);
+  dbg_show_d3.textContent = format(d3);
+}
+
+/* 祝日 */
 const holidays = new Set();
 let ready = false;
 
 async function loadHolidaysForYears(years){
   holidays.clear();
   ready = false;
-
-  // 重複排除
   const uniq = Array.from(new Set(years)).filter(Boolean);
 
   for(const y of uniq){
@@ -326,21 +343,19 @@ async function loadHolidaysForYears(years){
   ready = true;
 }
 
-function isHoliday(d){
-  return ready && holidays.has(toISODate(d));
-}
+function isHoliday(d){ return ready && holidays.has(toISODate(d)); }
 function isWeekend(d){
   const day = d.getDay();
   return day === 0 || day === 6;
 }
 
 /* 固定値（からあげ/ちびから） */
-function fk(d){ return (isWeekend(d)||isHoliday(d)) ? 24 : 14; } // からあげ
-function fc(d){ return (isWeekend(d)||isHoliday(d)) ? 12 : 6; }  // ちびから
+function fk(d){ return (isWeekend(d)||isHoliday(d)) ? 24 : 14; }
+function fc(d){ return (isWeekend(d)||isHoliday(d)) ? 12 : 6; }
 
 /* 予定値（入力①だけ引く） */
-function pk(d){ return (isWeekend(d)||isHoliday(d)) ? 8 : 4; } // からあげ
-function pc(d){ return (isWeekend(d)||isHoliday(d)) ? 4 : 2; } // ちびから
+function pk(d){ return (isWeekend(d)||isHoliday(d)) ? 8 : 4; }
+function pc(d){ return (isWeekend(d)||isHoliday(d)) ? 4 : 2; }
 
 /* 下味（④）丸め：40まで */
 function roundTo4Unit(n){
@@ -359,10 +374,7 @@ function roundTo4Unit(n){
   return n;
 }
 
-/* 粉/下味の共通計算
-   - 粉側（入力①）は「入力-予定値」
-   - 下味側（入力②）は「予定値を引かず入力そのまま」
-*/
+/* 粉/下味の計算 */
 function calc(a,b,f1,f2,f3,p1,s1,s2,s3,s4,o2,o4){
   if(!a){
     s1.textContent=s2.textContent=s3.textContent=s4.textContent=o2.textContent=o4.textContent="-";
@@ -403,23 +415,21 @@ function calc(a,b,f1,f2,f3,p1,s1,s2,s3,s4,o2,o4){
   o4.textContent = kgPair(rounded, step4);
 }
 
-/* スティック変換（元ルール） */
+/* スティック変換 */
 function convertStick(n){
   if(n <= 3) return 12;
   if(n <= 10) return 6;
   return 0;
 }
 
-/* スティック計算（変換後（元））→ どちらもkg
-   raw がマイナスなら converted=18
-*/
+/* スティック */
 function calcStick(){
   if(!stick.value){ stick_out.textContent="-"; return; }
   const x = Number(stick.value);
   if(!Number.isFinite(x)){ stick_out.textContent="-"; return; }
 
-  const plan  = (isWeekend(d0) || isHoliday(d0)) ? 6 : 3;     // 今日
-  const fixed = (isWeekend(dN) || isHoliday(dN)) ? 12 : 6;    // 翌日
+  const plan  = (isWeekend(d0) || isHoliday(d0)) ? 6 : 3;
+  const fixed = (isWeekend(dN) || isHoliday(dN)) ? 12 : 6;
 
   const raw = (x - plan) - fixed;
   const converted = (raw < 0) ? 18 : convertStick(raw);
@@ -427,30 +437,28 @@ function calcStick(){
   stick_out.textContent = kgPair(converted, raw);
 }
 
-/* 塩からあげ（元は出さない）→ kg */
+/* 塩 */
 function calcShio(){
   if(!shio.value){ shio_out.textContent="-"; return; }
   const x = Number(shio.value);
   if(!Number.isFinite(x)){ shio_out.textContent="-"; return; }
 
   const raw = x - 4;
-  const ans = (raw <= 4) ? 4 : 0;
-  shio_out.textContent = kgNum(ans);
+  shio_out.textContent = kgNum((raw <= 4) ? 4 : 0);
 }
 
-/* 旨辛（元は出さない）→ kg */
+/* 旨辛 */
 function calcUmakara(){
   if(!umakara.value){ umakara_out.textContent="-"; return; }
   const x = Number(umakara.value);
   if(!Number.isFinite(x)){ umakara_out.textContent="-"; return; }
 
   const raw = x - 2;
-  const ans = (raw <= 2) ? 2 : 0;
-  umakara_out.textContent = kgNum(ans);
+  umakara_out.textContent = kgNum((raw <= 2) ? 2 : 0);
 }
 
 function update(){
-  // からあげ（粉/下味）
+  // からあげ
   calc(
     kara1.value, kara2.value,
     fk(d1), fk(d2), fk(d3),
@@ -459,7 +467,7 @@ function update(){
     k_out2, k_out4
   );
 
-  // ちびから（粉/下味）
+  // ちびから
   calc(
     chibi1.value, chibi2.value,
     fc(d1), fc(d2), fc(d3),
@@ -473,64 +481,55 @@ function update(){
   calcUmakara();
 }
 
-/* ★デバッグ切替と日付適用 */
-function setDebugDefaults(){
-  // 現在の自動日付をデバッグ入力欄に入れる（ONにしたとき）
-  dbg_today.value = toISODate(d0);
-  dbg_next.value  = toISODate(dN);
-  dbg_d1.value    = toISODate(d1);
-  dbg_d2.value    = toISODate(d2);
-  dbg_d3.value    = toISODate(d3);
-}
-
+/* デバッグ：基準日1つで全日付を自動設定 */
 async function applyDatesFromMode(){
   const debug = debugToggle.checked;
 
   if(debug){
-    const td = parseDateInput(dbg_today.value);
-    const nx = parseDateInput(dbg_next.value);
-    const a1 = parseDateInput(dbg_d1.value);
-    const a2 = parseDateInput(dbg_d2.value);
-    const a3 = parseDateInput(dbg_d3.value);
-
-    // 未入力は現在値を維持（空で壊れないように）
-    if(td) d0 = dateOnly(td);
-    if(nx) dN = dateOnly(nx);
-    if(a1) d1 = dateOnly(a1);
-    if(a2) d2 = dateOnly(a2);
-    if(a3) d3 = dateOnly(a3);
+    const base = parseDateInput(dbg_base.value);
+    if(base){
+      d0 = dateOnly(base);
+      dN = addDays(d0, 1); // 計算用（表示しない）
+      d1 = addDays(d0, 1);
+      d2 = addDays(d0, 2);
+      d3 = addDays(d0, 3);
+    }
   }else{
-    d0 = getDateFromNow(0);
-    dN = getDateFromNow(1);
-    d1 = getDateFromNow(1);
-    d2 = getDateFromNow(2);
-    d3 = getDateFromNow(3);
+    d0 = dateOnly(getDateFromNow(0));
+    dN = dateOnly(getDateFromNow(1));
+    d1 = dateOnly(getDateFromNow(1));
+    d2 = dateOnly(getDateFromNow(2));
+    d3 = dateOnly(getDateFromNow(3));
   }
 
   applyDatesToUI();
 
-  // 祝日データ再取得（関係する年）
-  const years = [d0.getFullYear(), dN.getFullYear(), d1.getFullYear(), d2.getFullYear(), d3.getFullYear()];
-  await loadHolidaysForYears(years);
+  if(debug){
+    applyDebugPreview();
+  }else{
+    dbg_show_d1.textContent = "-";
+    dbg_show_d2.textContent = "-";
+    dbg_show_d3.textContent = "-";
+  }
 
+  await loadHolidaysForYears([d0.getFullYear(), dN.getFullYear(), d1.getFullYear(), d2.getFullYear(), d3.getFullYear()]);
   update();
 }
 
-/* 入力イベント */
+/* イベント */
 document.querySelectorAll("input").forEach(i => i.addEventListener("input", update));
 
 debugToggle.addEventListener("change", async ()=>{
   debugPanel.classList.toggle("hidden", !debugToggle.checked);
+
   if(debugToggle.checked){
-    setDebugDefaults();
+    dbg_base.value = toISODate(d0);
   }
+
   await applyDatesFromMode();
 });
 
-// デバッグ日付が変わったら反映（祝日再取得→再計算）
-["dbg_today","dbg_next","dbg_d1","dbg_d2","dbg_d3"].forEach(id=>{
-  document.getElementById(id).addEventListener("change", applyDatesFromMode);
-});
+dbg_base.addEventListener("change", applyDatesFromMode);
 
 /* 初期化 */
 (async()=>{
