@@ -50,8 +50,6 @@
     font-size: 18px;
   }
 
-  .label-bold { font-weight: bold; margin-bottom: 6px; }
-
   .input-group { margin-bottom: 10px; }
   .input-group label { display: block; font-size: 14px; margin-bottom: 2px; }
 
@@ -71,7 +69,10 @@
     border-top: 1px solid #eee;
   }
 
-  /* デバッグUI */
+  .meat-wrap {
+    margin-top: 20px;
+  }
+
   .debug-wrap { margin-bottom: 12px; }
   .debug-row {
     display:flex;
@@ -86,7 +87,7 @@
     margin-top: 10px;
   }
   .debug-grid label { font-size: 14px; }
-  .debug-grid input {
+  .debug-grid input[type="date"] {
     width: 100%;
     max-width: 250px;
     padding: 6px;
@@ -97,7 +98,6 @@
   .muted { font-size: 12px; color: #666; }
   .hidden { display:none; }
 
-  /* 自動設定日付の表示（基準日の下） */
   .debug-preview {
     margin-top: 8px;
     font-size: 14px;
@@ -113,6 +113,16 @@
   }
   .debug-preview .v{
     font-weight: 600;
+  }
+
+  .debug-option {
+    margin-top: 10px;
+    font-size: 14px;
+  }
+  .debug-option label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 </style>
 </head>
@@ -145,6 +155,13 @@
           <div class="row"><div class="k">明後日</div><div class="v" id="dbg_show_d2">-</div></div>
           <div class="row"><div class="k">明々後日</div><div class="v" id="dbg_show_d3">-</div></div>
         </div>
+
+        <div class="debug-option">
+          <label>
+            <input id="dbg_use_plan" type="checkbox" checked>
+            粉で予定値を引く
+          </label>
+        </div>
       </div>
     </div>
   </div>
@@ -153,7 +170,6 @@
 <!-- 入力：粉 -->
 <div class="section">
   <div class="section-title">粉</div>
-  <div class="label-bold">前日在庫</div>
 
   <div class="input-group">
     <label>からあげ</label>
@@ -169,7 +185,6 @@
 <!-- 入力：下味 -->
 <div class="section">
   <div class="section-title">下味</div>
-  <div class="label-bold">前日在庫</div>
 
   <div class="input-group">
     <label>からあげ</label>
@@ -274,15 +289,33 @@
   <div class="big" id="umakara_out">-</div>
 </div>
 
+<!-- 肉の仕込み量 -->
+<div class="meat-wrap">
+  <div class="other-row">
+    <div>カット</div>
+    <div class="big" id="cut_out">-</div>
+  </div>
+
+  <div class="other-row">
+    <div>正肉</div>
+    <div class="big" id="seiniku_out">-</div>
+  </div>
+
+  <div class="other-row">
+    <div>ムネ</div>
+    <div class="big" id="mune_out">-</div>
+  </div>
+</div>
+
 </div>
 
 <script>
-/* ====== 要素取得（★ここが今回の修正ポイント）====== */
 const el = (id) => document.getElementById(id);
 
 const debugToggle = el("debugToggle");
 const debugPanel  = el("debugPanel");
 const dbg_base    = el("dbg_base");
+const dbg_use_plan = el("dbg_use_plan");
 
 const dbg_show_d1 = el("dbg_show_d1");
 const dbg_show_d2 = el("dbg_show_d2");
@@ -320,14 +353,22 @@ const shio_out = el("shio_out");
 const stick_out = el("stick_out");
 const umakara_out = el("umakara_out");
 
-/* ====== 祝日API ====== */
+const cut_out = el("cut_out");
+const seiniku_out = el("seiniku_out");
+const mune_out = el("mune_out");
+
 const API = "https://date.nager.at/api/v3/PublicHolidays/";
 
-/* kg表示ヘルパ */
+/* 現在の計算結果を保持 */
+let currentKaraShitami = null;
+let currentChibiShitami = null;
+let currentShio = null;
+let currentStick = null;
+let currentUmakara = null;
+
 function kgNum(n){ return `${n}kg`; }
 function kgPair(a, b){ return `${a}kg（${b}kg）`; }
 
-/* 日付ユーティリティ */
 function dateOnly(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
 function addDays(d, days){
   const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -340,7 +381,14 @@ function format(d){
   const w = ["日","月","火","水","木","金","土"];
   return `${d.getMonth()+1}/${d.getDate()}(${w[d.getDay()]})`;
 }
-function toISODate(d){ return d.toISOString().slice(0,10); }
+
+function localDateKey(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function parseDateInput(v){
   if(!v) return null;
   const [y,m,day] = v.split("-").map(Number);
@@ -348,12 +396,11 @@ function parseDateInput(v){
   return new Date(y, m-1, day);
 }
 
-/* 可変日付（通常/デバッグで切替） */
-let d0 = dateOnly(getDateFromNow(0)); // 今日（スティック予定値）
-let dN = dateOnly(getDateFromNow(1)); // 翌日（スティック固定値） ※表示はしないが計算で使う
-let d1 = dateOnly(getDateFromNow(1)); // 明日
-let d2 = dateOnly(getDateFromNow(2)); // 明後日
-let d3 = dateOnly(getDateFromNow(3)); // 明々後日
+let d0 = dateOnly(getDateFromNow(0));
+let dN = dateOnly(getDateFromNow(1));
+let d1 = dateOnly(getDateFromNow(1));
+let d2 = dateOnly(getDateFromNow(2));
+let d3 = dateOnly(getDateFromNow(3));
 
 function applyDatesToUI(){
   d1El.textContent = format(d1);
@@ -362,14 +409,12 @@ function applyDatesToUI(){
   d3bEl.textContent = format(d3);
 }
 
-/* デバッグ欄に自動設定日付を表示（翌日は表示しない） */
 function applyDebugPreview(){
   dbg_show_d1.textContent = format(d1);
   dbg_show_d2.textContent = format(d2);
   dbg_show_d3.textContent = format(d3);
 }
 
-/* 祝日 */
 const holidays = new Set();
 let ready = false;
 
@@ -386,21 +431,20 @@ async function loadHolidaysForYears(years){
   ready = true;
 }
 
-function isHoliday(d){ return ready && holidays.has(toISODate(d)); }
+function isHoliday(d){
+  return ready && holidays.has(localDateKey(d));
+}
 function isWeekend(d){
   const day = d.getDay();
   return day === 0 || day === 6;
 }
 
-/* 固定値（からあげ/ちびから） */
 function fk(d){ return (isWeekend(d)||isHoliday(d)) ? 24 : 14; }
 function fc(d){ return (isWeekend(d)||isHoliday(d)) ? 12 : 6; }
 
-/* 予定値（入力①だけ引く） */
 function pk(d){ return (isWeekend(d)||isHoliday(d)) ? 8 : 4; }
 function pc(d){ return (isWeekend(d)||isHoliday(d)) ? 4 : 2; }
 
-/* 下味（④）丸め：40まで */
 function roundTo4Unit(n){
   if(n <= 0) return 0;
   if(n <= 2) return 0;
@@ -417,19 +461,25 @@ function roundTo4Unit(n){
   return n;
 }
 
-/* 粉/下味の計算 */
+function shouldUsePlanForPowder(){
+  if(!debugToggle.checked) return true;
+  return dbg_use_plan.checked;
+}
+
+/* ④の丸め後数値を返すように変更 */
 function calc(a,b,f1,f2,f3,p1,s1,s2,s3,s4,o2,o4){
   if(a === "" || a === null || a === undefined){
     s1.textContent=s2.textContent=s3.textContent=s4.textContent=o2.textContent=o4.textContent="-";
-    return;
+    return { powder: null, shitami: null };
   }
   a = Number(a);
   if(!Number.isFinite(a)){
     s1.textContent=s2.textContent=s3.textContent=s4.textContent=o2.textContent=o4.textContent="-";
-    return;
+    return { powder: null, shitami: null };
   }
 
-  const aAdj = a - p1;
+  const aAdj = shouldUsePlanForPowder() ? (a - p1) : a;
+
   const step1 = aAdj - f1;
   const step2 = f2 - step1;
 
@@ -439,15 +489,15 @@ function calc(a,b,f1,f2,f3,p1,s1,s2,s3,s4,o2,o4){
 
   if(b === "" || b === null || b === undefined){
     s3.textContent=s4.textContent=o4.textContent="-";
-    return;
+    return { powder: step2, shitami: null };
   }
   b = Number(b);
   if(!Number.isFinite(b)){
     s3.textContent=s4.textContent=o4.textContent="-";
-    return;
+    return { powder: step2, shitami: null };
   }
 
-  const bAdj = b; // 下味は予定値を引かない
+  const bAdj = b;
   const step3 = bAdj - step2;
   const step4 = f3 - step3;
 
@@ -456,20 +506,28 @@ function calc(a,b,f1,f2,f3,p1,s1,s2,s3,s4,o2,o4){
 
   const rounded = roundTo4Unit(step4);
   o4.textContent = kgPair(rounded, step4);
+
+  return { powder: step2, shitami: rounded };
 }
 
-/* スティック変換 */
 function convertStick(n){
   if(n <= 3) return 12;
   if(n <= 10) return 6;
   return 0;
 }
 
-/* スティック */
 function calcStick(){
-  if(stick.value === ""){ stick_out.textContent="-"; return; }
+  if(stick.value === ""){ 
+    stick_out.textContent="-";
+    currentStick = null;
+    return;
+  }
   const x = Number(stick.value);
-  if(!Number.isFinite(x)){ stick_out.textContent="-"; return; }
+  if(!Number.isFinite(x)){ 
+    stick_out.textContent="-";
+    currentStick = null;
+    return;
+  }
 
   const plan  = (isWeekend(d0) || isHoliday(d0)) ? 6 : 3;
   const fixed = (isWeekend(dN) || isHoliday(dN)) ? 12 : 6;
@@ -478,31 +536,73 @@ function calcStick(){
   const converted = (raw < 0) ? 18 : convertStick(raw);
 
   stick_out.textContent = kgPair(converted, raw);
+  currentStick = converted;
 }
 
-/* 塩 */
 function calcShio(){
-  if(shio.value === ""){ shio_out.textContent="-"; return; }
+  if(shio.value === ""){ 
+    shio_out.textContent="-";
+    currentShio = null;
+    return;
+  }
   const x = Number(shio.value);
-  if(!Number.isFinite(x)){ shio_out.textContent="-"; return; }
+  if(!Number.isFinite(x)){ 
+    shio_out.textContent="-";
+    currentShio = null;
+    return;
+  }
 
   const raw = x - 4;
-  shio_out.textContent = kgNum((raw <= 4) ? 4 : 0);
+  const ans = (raw <= 4) ? 4 : 0;
+  shio_out.textContent = kgNum(ans);
+  currentShio = ans;
 }
 
-/* 旨辛 */
 function calcUmakara(){
-  if(umakara.value === ""){ umakara_out.textContent="-"; return; }
+  if(umakara.value === ""){ 
+    umakara_out.textContent="-";
+    currentUmakara = null;
+    return;
+  }
   const x = Number(umakara.value);
-  if(!Number.isFinite(x)){ umakara_out.textContent="-"; return; }
+  if(!Number.isFinite(x)){ 
+    umakara_out.textContent="-";
+    currentUmakara = null;
+    return;
+  }
 
   const raw = x - 2;
-  umakara_out.textContent = kgNum((raw <= 2) ? 2 : 0);
+  const ans = (raw <= 2) ? 2 : 0;
+  umakara_out.textContent = kgNum(ans);
+  currentUmakara = ans;
+}
+
+/* ★追加：肉の仕込み量 */
+function calcMeat(){
+  if(currentKaraShitami === null || currentUmakara === null){
+    cut_out.textContent = "-";
+  }else{
+    const cut = (currentKaraShitami / 2) + (currentUmakara / 2);
+    cut_out.textContent = kgNum(cut);
+  }
+
+  if(currentChibiShitami === null || currentShio === null){
+    seiniku_out.textContent = "-";
+  }else{
+    const seiniku = (currentChibiShitami / 2) + (currentShio / 2);
+    seiniku_out.textContent = kgNum(seiniku);
+  }
+
+  if(currentStick === null){
+    mune_out.textContent = "-";
+  }else{
+    const mune = currentStick / 2;
+    mune_out.textContent = kgNum(mune);
+  }
 }
 
 function update(){
-  // からあげ
-  calc(
+  const karaResult = calc(
     kara1.value, kara2.value,
     fk(d1), fk(d2), fk(d3),
     pk(d1),
@@ -510,8 +610,7 @@ function update(){
     k_out2, k_out4
   );
 
-  // ちびから
-  calc(
+  const chibiResult = calc(
     chibi1.value, chibi2.value,
     fc(d1), fc(d2), fc(d3),
     pc(d1),
@@ -519,12 +618,15 @@ function update(){
     c_out2, c_out4
   );
 
+  currentKaraShitami = karaResult.shitami;
+  currentChibiShitami = chibiResult.shitami;
+
   calcShio();
   calcStick();
   calcUmakara();
+  calcMeat();
 }
 
-/* デバッグ：基準日1つで全日付を自動設定 */
 async function applyDatesFromMode(){
   const debug = debugToggle.checked;
 
@@ -532,7 +634,7 @@ async function applyDatesFromMode(){
     const base = parseDateInput(dbg_base.value);
     if(base){
       d0 = dateOnly(base);
-      dN = addDays(d0, 1); // 計算用
+      dN = addDays(d0, 1);
       d1 = addDays(d0, 1);
       d2 = addDays(d0, 2);
       d3 = addDays(d0, 3);
@@ -555,33 +657,43 @@ async function applyDatesFromMode(){
     dbg_show_d3.textContent = "-";
   }
 
-  await loadHolidaysForYears([d0.getFullYear(), dN.getFullYear(), d1.getFullYear(), d2.getFullYear(), d3.getFullYear()]);
+  await loadHolidaysForYears([
+    d0.getFullYear(),
+    dN.getFullYear(),
+    d1.getFullYear(),
+    d2.getFullYear(),
+    d3.getFullYear()
+  ]);
+
   update();
 }
 
-/* 入力イベント（数値） */
 [kara1, chibi1, kara2, chibi2, shio, stick, umakara].forEach(inp => {
   inp.addEventListener("input", update);
 });
 
-/* デバッグ表示切替（★確実に動く） */
 debugToggle.addEventListener("change", async ()=>{
-  // ここで確実に表示/非表示
   if(debugToggle.checked){
     debugPanel.classList.remove("hidden");
-    dbg_base.value = toISODate(d0); // 初期値
+    dbg_base.value = localDateKey(d0);
   }else{
     debugPanel.classList.add("hidden");
   }
   await applyDatesFromMode();
 });
 
+dbg_use_plan.addEventListener("change", update);
 dbg_base.addEventListener("change", applyDatesFromMode);
 
-/* 初期化 */
 (async()=>{
   applyDatesToUI();
-  await loadHolidaysForYears([d0.getFullYear(), dN.getFullYear(), d1.getFullYear(), d2.getFullYear(), d3.getFullYear()]);
+  await loadHolidaysForYears([
+    d0.getFullYear(),
+    dN.getFullYear(),
+    d1.getFullYear(),
+    d2.getFullYear(),
+    d3.getFullYear()
+  ]);
   update();
 })();
 </script>
