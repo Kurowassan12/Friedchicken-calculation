@@ -4,8 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>仕込み計算</title>
-<link rel="icon" type="image/png" href="fav.png">
-  
+
 <style>
   body { font-family: system-ui; margin: 20px; }
   .card { max-width: 860px; margin: auto; padding: 16px; border: 1px solid #ddd; border-radius: 12px; }
@@ -174,12 +173,12 @@
 
   <div class="input-group">
     <label>からあげ</label>
-    <input id="kara1" type="number" placeholder="17時時点の在庫">
+    <input id="kara1" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="17時時点の在庫">
   </div>
 
   <div class="input-group">
     <label>ちびから</label>
-    <input id="chibi1" type="number" placeholder="17時時点の在庫">
+    <input id="chibi1" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="17時時点の在庫">
   </div>
 </div>
 
@@ -189,12 +188,12 @@
 
   <div class="input-group">
     <label>からあげ</label>
-    <input id="kara2" type="number" placeholder="17時時点の在庫">
+    <input id="kara2" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="17時時点の在庫">
   </div>
 
   <div class="input-group">
     <label>ちびから</label>
-    <input id="chibi2" type="number" placeholder="17時時点の在庫">
+    <input id="chibi2" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="17時時点の在庫">
   </div>
 </div>
 
@@ -204,17 +203,17 @@
 
   <div class="input-group">
     <label>塩からあげ</label>
-    <input id="shio" type="number" placeholder="17時時点の在庫">
+    <input id="shio" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="17時時点の在庫">
   </div>
 
   <div class="input-group">
     <label>スティック</label>
-    <input id="stick" type="number" placeholder="17時時点の在庫">
+    <input id="stick" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="17時時点の在庫">
   </div>
 
   <div class="input-group">
     <label>旨辛</label>
-    <input id="umakara" type="number" placeholder="17時時点の在庫">
+    <input id="umakara" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="17時時点の在庫">
   </div>
 </div>
 
@@ -360,7 +359,6 @@ const mune_out = el("mune_out");
 
 const API = "https://date.nager.at/api/v3/PublicHolidays/";
 
-/* 現在の計算結果を保持 */
 let currentKaraShitami = null;
 let currentChibiShitami = null;
 let currentShio = null;
@@ -368,7 +366,7 @@ let currentStick = null;
 let currentUmakara = null;
 
 function kgNum(n){ return `${n}kg`; }
-function kgPair(a, b){ return `${a}kg（${b}kg）`; }
+function kgPair(a, b){ return `${b}kg（${a}kg）`; }
 
 function dateOnly(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
 function addDays(d, days){
@@ -467,7 +465,6 @@ function shouldUsePlanForPowder(){
   return dbg_use_plan.checked;
 }
 
-/* ④の丸め後数値を返すように変更 */
 function calc(a,b,f1,f2,f3,p1,s1,s2,s3,s4,o2,o4){
   if(a === "" || a === null || a === undefined){
     s1.textContent=s2.textContent=s3.textContent=s4.textContent=o2.textContent=o4.textContent="-";
@@ -518,13 +515,13 @@ function convertStick(n){
 }
 
 function calcStick(){
-  if(stick.value === ""){ 
+  if(stick.value === ""){
     stick_out.textContent="-";
     currentStick = null;
     return;
   }
   const x = Number(stick.value);
-  if(!Number.isFinite(x)){ 
+  if(!Number.isFinite(x)){
     stick_out.textContent="-";
     currentStick = null;
     return;
@@ -536,37 +533,44 @@ function calcStick(){
   const raw = (x - plan) - fixed;
   const converted = (raw < 0) ? 18 : convertStick(raw);
 
-  stick_out.textContent = kgPair(converted, raw);
+  stick_out.textContent = `${converted}kg`;
   currentStick = converted;
 }
 
 function calcShio(){
-  if(shio.value === ""){ 
+  if(shio.value === ""){
     shio_out.textContent="-";
     currentShio = null;
     return;
   }
   const x = Number(shio.value);
-  if(!Number.isFinite(x)){ 
+  if(!Number.isFinite(x)){
     shio_out.textContent="-";
     currentShio = null;
     return;
   }
 
-  const raw = x - 4;
+  let minus;
+  if(isWeekend(d1) || isHoliday(d1)){
+    minus = 4;
+  }else{
+    minus = 2;
+  }
+
+  const raw = x - minus;
   const ans = (raw <= 4) ? 4 : 0;
   shio_out.textContent = kgNum(ans);
   currentShio = ans;
 }
 
 function calcUmakara(){
-  if(umakara.value === ""){ 
+  if(umakara.value === ""){
     umakara_out.textContent="-";
     currentUmakara = null;
     return;
   }
   const x = Number(umakara.value);
-  if(!Number.isFinite(x)){ 
+  if(!Number.isFinite(x)){
     umakara_out.textContent="-";
     currentUmakara = null;
     return;
@@ -578,27 +582,26 @@ function calcUmakara(){
   currentUmakara = ans;
 }
 
-/* ★追加：肉の仕込み量 */
 function calcMeat(){
   if(currentKaraShitami === null || currentUmakara === null){
     cut_out.textContent = "-";
   }else{
     const cut = (currentKaraShitami / 2) + (currentUmakara / 2);
-    cut_out.textContent = kgNum(cut);
+    cut_out.textContent = String(cut);
   }
 
   if(currentChibiShitami === null || currentShio === null){
     seiniku_out.textContent = "-";
   }else{
     const seiniku = (currentChibiShitami / 2) + (currentShio / 2);
-    seiniku_out.textContent = kgNum(seiniku);
+    seiniku_out.textContent = String(seiniku);
   }
 
   if(currentStick === null){
     mune_out.textContent = "-";
   }else{
     const mune = currentStick / 2;
-    mune_out.textContent = kgNum(mune);
+    mune_out.textContent = String(mune);
   }
 }
 
