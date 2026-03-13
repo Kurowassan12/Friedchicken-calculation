@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>仕込み計算</title>
 
 <style>
@@ -65,8 +65,23 @@
   .other-row{
     display:flex;
     justify-content: space-between;
+    align-items: center;
     padding: 8px 0;
     border-top: 1px solid #eee;
+    gap: 12px;
+  }
+
+  .other-left{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .formula{
+    font-size:13px;
+    color:#666;
+    white-space:nowrap;
   }
 
   .meat-wrap {
@@ -275,17 +290,26 @@
 <h3>その他</h3>
 
 <div class="other-row">
-  <div>塩からあげ</div>
+  <div class="other-left">
+    <div>塩からあげ</div>
+    <div class="formula" id="shio_formula"></div>
+  </div>
   <div class="big" id="shio_out">-</div>
 </div>
 
 <div class="other-row">
-  <div>スティック</div>
+  <div class="other-left">
+    <div>スティック</div>
+    <div class="formula" id="stick_formula"></div>
+  </div>
   <div class="big" id="stick_out">-</div>
 </div>
 
 <div class="other-row">
-  <div>旨辛</div>
+  <div class="other-left">
+    <div>旨辛</div>
+    <div class="formula" id="umakara_formula"></div>
+  </div>
   <div class="big" id="umakara_out">-</div>
 </div>
 
@@ -352,6 +376,10 @@ const c_out4 = el("c_out4");
 const shio_out = el("shio_out");
 const stick_out = el("stick_out");
 const umakara_out = el("umakara_out");
+
+const shio_formula = el("shio_formula");
+const stick_formula = el("stick_formula");
+const umakara_formula = el("umakara_formula");
 
 const cut_out = el("cut_out");
 const seiniku_out = el("seiniku_out");
@@ -516,12 +544,14 @@ function convertStick(n){
 function calcStick(){
   if(stick.value === ""){
     stick_out.textContent="-";
+    stick_formula.textContent="";
     currentStick = null;
     return;
   }
   const x = Number(stick.value);
   if(!Number.isFinite(x)){
     stick_out.textContent="-";
+    stick_formula.textContent="";
     currentStick = null;
     return;
   }
@@ -532,6 +562,7 @@ function calcStick(){
   const raw = (x - plan) - fixed;
   const converted = (raw < 0) ? 18 : convertStick(raw);
 
+  stick_formula.textContent = `${x}-${plan}-${fixed}=${raw}`;
   stick_out.textContent = `${converted}kg`;
   currentStick = converted;
 }
@@ -539,12 +570,14 @@ function calcStick(){
 function calcShio(){
   if(shio.value === ""){
     shio_out.textContent="-";
+    shio_formula.textContent="";
     currentShio = null;
     return;
   }
   const x = Number(shio.value);
   if(!Number.isFinite(x)){
     shio_out.textContent="-";
+    shio_formula.textContent="";
     currentShio = null;
     return;
   }
@@ -558,6 +591,8 @@ function calcShio(){
 
   const raw = x - minus;
   const ans = (raw <= 4) ? 4 : 0;
+
+  shio_formula.textContent = `${x}-${minus}=${raw}`;
   shio_out.textContent = kgNum(ans);
   currentShio = ans;
 }
@@ -565,18 +600,22 @@ function calcShio(){
 function calcUmakara(){
   if(umakara.value === ""){
     umakara_out.textContent="-";
+    umakara_formula.textContent="";
     currentUmakara = null;
     return;
   }
   const x = Number(umakara.value);
   if(!Number.isFinite(x)){
     umakara_out.textContent="-";
+    umakara_formula.textContent="";
     currentUmakara = null;
     return;
   }
 
   const raw = x - 2;
   const ans = (raw <= 2) ? 2 : 0;
+
+  umakara_formula.textContent = `${x}-2=${raw}`;
   umakara_out.textContent = kgNum(ans);
   currentUmakara = ans;
 }
