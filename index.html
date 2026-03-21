@@ -28,6 +28,15 @@
     text-align: center;
   }
 
+  .date.sat {
+    color: #0066cc;
+  }
+
+  .date.sun,
+  .date.holiday {
+    color: #cc0000;
+  }
+
   .bigrow {
     display:flex;
     justify-content: space-between;
@@ -157,6 +166,15 @@
     font-weight: bold;
     margin-bottom: 8px;
     font-size: 14px;
+  }
+
+  .advanced-col-title.sat {
+    color: #0066cc;
+  }
+
+  .advanced-col-title.sun,
+  .advanced-col-title.holiday {
+    color: #cc0000;
   }
 
   .advanced-item {
@@ -382,7 +400,7 @@
 
   <div class="advanced-grid">
     <div class="advanced-col">
-      <div class="advanced-col-title">明日の予定値</div>
+      <div class="advanced-col-title" id="adv_title_d1">-</div>
 
       <div class="advanced-item">
         <label for="plan_d1_kara">からあげの予定値</label>
@@ -396,7 +414,7 @@
     </div>
 
     <div class="advanced-col">
-      <div class="advanced-col-title">明後日の予定値</div>
+      <div class="advanced-col-title" id="adv_title_d2">-</div>
 
       <div class="advanced-item">
         <label for="plan_d2_kara">からあげの予定値</label>
@@ -410,7 +428,7 @@
     </div>
 
     <div class="advanced-col">
-      <div class="advanced-col-title">明々後日の予定値</div>
+      <div class="advanced-col-title" id="adv_title_d3">-</div>
 
       <div class="advanced-item">
         <label for="plan_d3_kara">からあげの予定値</label>
@@ -486,6 +504,10 @@ const plan_d2_chibi = el("plan_d2_chibi");
 const plan_d3_kara = el("plan_d3_kara");
 const plan_d3_chibi = el("plan_d3_chibi");
 
+const adv_title_d1 = el("adv_title_d1");
+const adv_title_d2 = el("adv_title_d2");
+const adv_title_d3 = el("adv_title_d3");
+
 const API = "https://date.nager.at/api/v3/PublicHolidays/";
 
 let currentKaraShitami = null;
@@ -508,6 +530,21 @@ function getDateFromNow(offset){ return addDays(new Date(), offset); }
 function format(d){
   const w = ["日","月","火","水","木","金","土"];
   return `${d.getMonth()+1}/${d.getDate()}(${w[d.getDay()]})`;
+}
+
+function formatDateWithWeekday(d){
+  const w = ["日","月","火","水","木","金","土"];
+  return `${d.getMonth()+1}/${d.getDate()}（${w[d.getDay()]}）`;
+}
+
+function applyWeekendColor(targetEl, d){
+  targetEl.classList.remove("sat", "sun", "holiday");
+
+  if(isHoliday(d) || d.getDay() === 0){
+    targetEl.classList.add("holiday");
+  }else if(d.getDay() === 6){
+    targetEl.classList.add("sat");
+  }
 }
 
 function localDateKey(d){
@@ -535,12 +572,27 @@ function applyDatesToUI(){
   d2El.textContent = format(d2);
   d3aEl.textContent = format(d3);
   d3bEl.textContent = format(d3);
+
+  applyWeekendColor(d1El, d1);
+  applyWeekendColor(d2El, d2);
+  applyWeekendColor(d3aEl, d3);
+  applyWeekendColor(d3bEl, d3);
 }
 
 function applyDebugPreview(){
   dbg_show_d1.textContent = format(d1);
   dbg_show_d2.textContent = format(d2);
   dbg_show_d3.textContent = format(d3);
+}
+
+function applyAdvancedTitles(){
+  adv_title_d1.textContent = formatDateWithWeekday(d1);
+  adv_title_d2.textContent = formatDateWithWeekday(d2);
+  adv_title_d3.textContent = formatDateWithWeekday(d3);
+
+  applyWeekendColor(adv_title_d1, d1);
+  applyWeekendColor(adv_title_d2, d2);
+  applyWeekendColor(adv_title_d3, d3);
 }
 
 const holidays = new Set();
@@ -811,7 +863,16 @@ async function applyDatesFromMode(){
     d3 = dateOnly(getDateFromNow(3));
   }
 
+  await loadHolidaysForYears([
+    d0.getFullYear(),
+    dN.getFullYear(),
+    d1.getFullYear(),
+    d2.getFullYear(),
+    d3.getFullYear()
+  ]);
+
   applyDatesToUI();
+  applyAdvancedTitles();
 
   if(debug){
     applyDebugPreview();
@@ -820,14 +881,6 @@ async function applyDatesFromMode(){
     dbg_show_d2.textContent = "-";
     dbg_show_d3.textContent = "-";
   }
-
-  await loadHolidaysForYears([
-    d0.getFullYear(),
-    dN.getFullYear(),
-    d1.getFullYear(),
-    d2.getFullYear(),
-    d3.getFullYear()
-  ]);
 
   fillDefaultAdvancedPlans();
   update();
@@ -857,7 +910,6 @@ dbg_use_plan.addEventListener("change", update);
 dbg_base.addEventListener("change", applyDatesFromMode);
 
 (async()=>{
-  applyDatesToUI();
   await loadHolidaysForYears([
     d0.getFullYear(),
     dN.getFullYear(),
@@ -865,6 +917,8 @@ dbg_base.addEventListener("change", applyDatesFromMode);
     d2.getFullYear(),
     d3.getFullYear()
   ]);
+  applyDatesToUI();
+  applyAdvancedTitles();
   fillDefaultAdvancedPlans();
   update();
 })();
