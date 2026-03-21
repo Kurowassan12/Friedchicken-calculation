@@ -139,6 +139,51 @@
     align-items: center;
     gap: 8px;
   }
+
+  .advanced-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 10px;
+  }
+
+  .advanced-col {
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 10px;
+  }
+
+  .advanced-col-title {
+    font-weight: bold;
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+
+  .advanced-item {
+    margin-bottom: 10px;
+  }
+
+  .advanced-item label {
+    display: block;
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+
+  .advanced-item input {
+    width: 100%;
+    max-width: 100%;
+    padding: 8px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-sizing: border-box;
+  }
+
+  @media (max-width: 700px) {
+    .advanced-grid {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>
 </head>
 
@@ -217,13 +262,13 @@
   <div class="section-title">その他</div>
 
   <div class="input-group">
-    <label>塩からあげ</label>
-    <input id="shio" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="17時時点の在庫">
+    <label>スティック</label>
+    <input id="stick" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="17時時点の在庫">
   </div>
 
   <div class="input-group">
-    <label>スティック</label>
-    <input id="stick" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="17時時点の在庫">
+    <label>塩からあげ</label>
+    <input id="shio" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="17時時点の在庫">
   </div>
 
   <div class="input-group">
@@ -291,18 +336,18 @@
 
 <div class="other-row">
   <div class="other-left">
-    <div>塩からあげ</div>
-    <div class="formula" id="shio_formula"></div>
-  </div>
-  <div class="big" id="shio_out">-</div>
-</div>
-
-<div class="other-row">
-  <div class="other-left">
     <div>スティック</div>
     <div class="formula" id="stick_formula"></div>
   </div>
   <div class="big" id="stick_out">-</div>
+</div>
+
+<div class="other-row">
+  <div class="other-left">
+    <div>塩からあげ</div>
+    <div class="formula" id="shio_formula"></div>
+  </div>
+  <div class="big" id="shio_out">-</div>
 </div>
 
 <div class="other-row">
@@ -328,6 +373,55 @@
   <div class="other-row">
     <div>ムネ</div>
     <div class="big" id="mune_out">-</div>
+  </div>
+</div>
+
+<!-- 高度な設定 -->
+<div class="section" style="margin-top:20px;">
+  <div class="section-title">高度な設定</div>
+
+  <div class="advanced-grid">
+    <div class="advanced-col">
+      <div class="advanced-col-title">明日の予定値</div>
+
+      <div class="advanced-item">
+        <label for="plan_d1_kara">からあげの予定値</label>
+        <input id="plan_d1_kara" type="number" inputmode="numeric" pattern="[0-9]*">
+      </div>
+
+      <div class="advanced-item">
+        <label for="plan_d1_chibi">ちびからの予定値</label>
+        <input id="plan_d1_chibi" type="number" inputmode="numeric" pattern="[0-9]*">
+      </div>
+    </div>
+
+    <div class="advanced-col">
+      <div class="advanced-col-title">明後日の予定値</div>
+
+      <div class="advanced-item">
+        <label for="plan_d2_kara">からあげの予定値</label>
+        <input id="plan_d2_kara" type="number" inputmode="numeric" pattern="[0-9]*">
+      </div>
+
+      <div class="advanced-item">
+        <label for="plan_d2_chibi">ちびからの予定値</label>
+        <input id="plan_d2_chibi" type="number" inputmode="numeric" pattern="[0-9]*">
+      </div>
+    </div>
+
+    <div class="advanced-col">
+      <div class="advanced-col-title">明々後日の予定値</div>
+
+      <div class="advanced-item">
+        <label for="plan_d3_kara">からあげの予定値</label>
+        <input id="plan_d3_kara" type="number" inputmode="numeric" pattern="[0-9]*">
+      </div>
+
+      <div class="advanced-item">
+        <label for="plan_d3_chibi">ちびからの予定値</label>
+        <input id="plan_d3_chibi" type="number" inputmode="numeric" pattern="[0-9]*">
+      </div>
+    </div>
   </div>
 </div>
 
@@ -384,6 +478,13 @@ const umakara_formula = el("umakara_formula");
 const cut_out = el("cut_out");
 const seiniku_out = el("seiniku_out");
 const mune_out = el("mune_out");
+
+const plan_d1_kara = el("plan_d1_kara");
+const plan_d1_chibi = el("plan_d1_chibi");
+const plan_d2_kara = el("plan_d2_kara");
+const plan_d2_chibi = el("plan_d2_chibi");
+const plan_d3_kara = el("plan_d3_kara");
+const plan_d3_chibi = el("plan_d3_chibi");
 
 const API = "https://date.nager.at/api/v3/PublicHolidays/";
 
@@ -491,6 +592,27 @@ function roundTo4Unit(n){
 function shouldUsePlanForPowder(){
   if(!debugToggle.checked) return true;
   return dbg_use_plan.checked;
+}
+
+function planVal(inputEl, fallback){
+  const v = Number(inputEl.value);
+  return Number.isFinite(v) ? v : fallback;
+}
+
+function getKaraPlanD1(){ return planVal(plan_d1_kara, fk(d1)); }
+function getChibiPlanD1(){ return planVal(plan_d1_chibi, fc(d1)); }
+function getKaraPlanD2(){ return planVal(plan_d2_kara, fk(d2)); }
+function getChibiPlanD2(){ return planVal(plan_d2_chibi, fc(d2)); }
+function getKaraPlanD3(){ return planVal(plan_d3_kara, fk(d3)); }
+function getChibiPlanD3(){ return planVal(plan_d3_chibi, fc(d3)); }
+
+function fillDefaultAdvancedPlans(){
+  plan_d1_kara.value = fk(d1);
+  plan_d1_chibi.value = fc(d1);
+  plan_d2_kara.value = fk(d2);
+  plan_d2_chibi.value = fc(d2);
+  plan_d3_kara.value = fk(d3);
+  plan_d3_chibi.value = fc(d3);
 }
 
 function calc(a,b,f1,f2,f3,p1,s1,s2,s3,s4,o2,o4){
@@ -646,7 +768,7 @@ function calcMeat(){
 function update(){
   const karaResult = calc(
     kara1.value, kara2.value,
-    fk(d1), fk(d2), fk(d3),
+    getKaraPlanD1(), getKaraPlanD2(), getKaraPlanD3(),
     pk(d0),
     k_s1, k_s2, k_s3, k_s4,
     k_out2, k_out4
@@ -654,7 +776,7 @@ function update(){
 
   const chibiResult = calc(
     chibi1.value, chibi2.value,
-    fc(d1), fc(d2), fc(d3),
+    getChibiPlanD1(), getChibiPlanD2(), getChibiPlanD3(),
     pc(d0),
     c_s1, c_s2, c_s3, c_s4,
     c_out2, c_out4
@@ -663,8 +785,8 @@ function update(){
   currentKaraShitami = karaResult.shitami;
   currentChibiShitami = chibiResult.shitami;
 
-  calcShio();
   calcStick();
+  calcShio();
   calcUmakara();
   calcMeat();
 }
@@ -707,10 +829,17 @@ async function applyDatesFromMode(){
     d3.getFullYear()
   ]);
 
+  fillDefaultAdvancedPlans();
   update();
 }
 
-[kara1, chibi1, kara2, chibi2, shio, stick, umakara].forEach(inp => {
+[
+  kara1, chibi1, kara2, chibi2,
+  stick, shio, umakara,
+  plan_d1_kara, plan_d1_chibi,
+  plan_d2_kara, plan_d2_chibi,
+  plan_d3_kara, plan_d3_chibi
+].forEach(inp => {
   inp.addEventListener("input", update);
 });
 
@@ -736,6 +865,7 @@ dbg_base.addEventListener("change", applyDatesFromMode);
     d2.getFullYear(),
     d3.getFullYear()
   ]);
+  fillDefaultAdvancedPlans();
   update();
 })();
 </script>
