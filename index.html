@@ -62,13 +62,15 @@
   .input-group { margin-bottom: 10px; }
   .input-group label { display: block; font-size: 14px; margin-bottom: 2px; }
 
-  .input-group input {
+  .input-group input,
+  .input-group select {
     width: 100%;
     max-width: 250px;
     padding: 8px;
     font-size: 16px;
     border: 1px solid #ccc;
     border-radius: 8px;
+    background: #fff;
   }
 
   .other-row{
@@ -197,8 +199,44 @@
     box-sizing: border-box;
   }
 
+  .assign-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .assign-item {
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 10px;
+  }
+
+  .assign-item label {
+    display: block;
+    font-size: 13px;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+
+  .assign-item select {
+    width: 100%;
+    padding: 8px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  @media (max-width: 900px) {
+    .assign-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
   @media (max-width: 700px) {
-    .advanced-grid {
+    .advanced-grid,
+    .assign-grid {
       grid-template-columns: 1fr;
     }
   }
@@ -441,6 +479,40 @@
       </div>
     </div>
   </div>
+
+  <div class="assign-grid">
+    <div class="assign-item">
+      <label for="assign_kara">からあげ</label>
+      <select id="assign_kara">
+        <option value="cut">カット</option>
+        <option value="seiniku">正肉</option>
+      </select>
+    </div>
+
+    <div class="assign-item">
+      <label for="assign_chibi">ちびから</label>
+      <select id="assign_chibi">
+        <option value="cut">カット</option>
+        <option value="seiniku">正肉</option>
+      </select>
+    </div>
+
+    <div class="assign-item">
+      <label for="assign_shio">塩からあげ</label>
+      <select id="assign_shio">
+        <option value="cut">カット</option>
+        <option value="seiniku">正肉</option>
+      </select>
+    </div>
+
+    <div class="assign-item">
+      <label for="assign_umakara">旨辛</label>
+      <select id="assign_umakara">
+        <option value="cut">カット</option>
+        <option value="seiniku">正肉</option>
+      </select>
+    </div>
+  </div>
 </div>
 
 </div>
@@ -507,6 +579,11 @@ const plan_d3_chibi = el("plan_d3_chibi");
 const adv_title_d1 = el("adv_title_d1");
 const adv_title_d2 = el("adv_title_d2");
 const adv_title_d3 = el("adv_title_d3");
+
+const assign_kara = el("assign_kara");
+const assign_chibi = el("assign_chibi");
+const assign_shio = el("assign_shio");
+const assign_umakara = el("assign_umakara");
 
 const API = "https://date.nager.at/api/v3/PublicHolidays/";
 
@@ -667,6 +744,13 @@ function fillDefaultAdvancedPlans(){
   plan_d3_chibi.value = fc(d3);
 }
 
+function fillDefaultAssignments(){
+  assign_kara.value = "cut";
+  assign_chibi.value = "seiniku";
+  assign_shio.value = "seiniku";
+  assign_umakara.value = "cut";
+}
+
 function calc(a,b,f1,f2,f3,p1,s1,s2,s3,s4,o2,o4){
   if(a === "" || a === null || a === undefined){
     s1.textContent=s2.textContent=s3.textContent=s4.textContent=o2.textContent=o4.textContent="-";
@@ -795,19 +879,53 @@ function calcUmakara(){
 }
 
 function calcMeat(){
-  if(currentKaraShitami === null || currentUmakara === null){
-    cut_out.textContent = "-";
-  }else{
-    const cut = (currentKaraShitami / 2) + (currentUmakara / 2);
-    cut_out.textContent = String(cut);
+  let cut = 0;
+  let seiniku = 0;
+  let hasCut = false;
+  let hasSeiniku = false;
+
+  if(currentKaraShitami !== null){
+    if(assign_kara.value === "cut"){
+      cut += currentKaraShitami / 2;
+      hasCut = true;
+    }else{
+      seiniku += currentKaraShitami / 2;
+      hasSeiniku = true;
+    }
   }
 
-  if(currentChibiShitami === null || currentShio === null){
-    seiniku_out.textContent = "-";
-  }else{
-    const seiniku = (currentChibiShitami / 2) + (currentShio / 2);
-    seiniku_out.textContent = String(seiniku);
+  if(currentChibiShitami !== null){
+    if(assign_chibi.value === "cut"){
+      cut += currentChibiShitami / 2;
+      hasCut = true;
+    }else{
+      seiniku += currentChibiShitami / 2;
+      hasSeiniku = true;
+    }
   }
+
+  if(currentShio !== null){
+    if(assign_shio.value === "cut"){
+      cut += currentShio / 2;
+      hasCut = true;
+    }else{
+      seiniku += currentShio / 2;
+      hasSeiniku = true;
+    }
+  }
+
+  if(currentUmakara !== null){
+    if(assign_umakara.value === "cut"){
+      cut += currentUmakara / 2;
+      hasCut = true;
+    }else{
+      seiniku += currentUmakara / 2;
+      hasSeiniku = true;
+    }
+  }
+
+  cut_out.textContent = hasCut ? String(cut) : "-";
+  seiniku_out.textContent = hasSeiniku ? String(seiniku) : "-";
 
   if(currentStick === null){
     mune_out.textContent = "-";
@@ -883,6 +1001,7 @@ async function applyDatesFromMode(){
   }
 
   fillDefaultAdvancedPlans();
+  fillDefaultAssignments();
   update();
 }
 
@@ -891,9 +1010,11 @@ async function applyDatesFromMode(){
   stick, shio, umakara,
   plan_d1_kara, plan_d1_chibi,
   plan_d2_kara, plan_d2_chibi,
-  plan_d3_kara, plan_d3_chibi
+  plan_d3_kara, plan_d3_chibi,
+  assign_kara, assign_chibi, assign_shio, assign_umakara
 ].forEach(inp => {
   inp.addEventListener("input", update);
+  inp.addEventListener("change", update);
 });
 
 debugToggle.addEventListener("change", async ()=>{
@@ -910,6 +1031,7 @@ dbg_use_plan.addEventListener("change", update);
 dbg_base.addEventListener("change", applyDatesFromMode);
 
 (async()=>{
+  fillDefaultAssignments();
   await loadHolidaysForYears([
     d0.getFullYear(),
     dN.getFullYear(),
