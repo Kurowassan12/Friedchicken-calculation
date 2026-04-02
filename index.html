@@ -210,41 +210,6 @@
 
 <h2>仕込み計算</h2>
 
-<!-- デバッグ -->
-<div class="section debug-wrap">
-  <div class="section-title">デバッグ</div>
-
-  <div class="debug-row">
-    <label style="display:flex;align-items:center;gap:8px;">
-      <input id="debugToggle" type="checkbox">
-      デバッグモード
-    </label>
-    <span class="muted">ONのとき「本日（基準日）」を入れると、明日/明後日/明々後日を自動設定します</span>
-  </div>
-
-  <div id="debugPanel" class="hidden">
-    <div class="debug-grid">
-      <label for="dbg_base">本日（基準日）</label>
-      <div>
-        <input id="dbg_base" type="date">
-
-        <div class="debug-preview">
-          <div class="row"><div class="k">明日</div><div class="v" id="dbg_show_d1">-</div></div>
-          <div class="row"><div class="k">明後日</div><div class="v" id="dbg_show_d2">-</div></div>
-          <div class="row"><div class="k">明々後日</div><div class="v" id="dbg_show_d3">-</div></div>
-        </div>
-
-        <div class="debug-option">
-          <label>
-            <input id="dbg_use_plan" type="checkbox" checked>
-            粉で予定値を引く
-          </label>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- 入力：粉 -->
 <div class="section">
   <div class="section-title">粉</div>
@@ -443,10 +408,51 @@
   </div>
 </div>
 
+<!-- デバッグ -->
+<div class="section debug-wrap">
+  <div class="section-title">デバッグ</div>
+
+  <div class="debug-row">
+    <label style="display:flex;align-items:center;gap:8px;">
+      <input id="debugToggle" type="checkbox">
+      デバッグモード
+    </label>
+    <span class="muted">ONのとき「本日（基準日）」を入れると、明日/明後日/明々後日を自動設定します</span>
+  </div>
+
+  <div id="debugPanel" class="hidden">
+    <div class="debug-grid">
+      <label for="dbg_base">本日（基準日）</label>
+      <div>
+        <input id="dbg_base" type="date">
+
+        <div class="debug-preview">
+          <div class="row"><div class="k">明日</div><div class="v" id="dbg_show_d1">-</div></div>
+          <div class="row"><div class="k">明後日</div><div class="v" id="dbg_show_d2">-</div></div>
+          <div class="row"><div class="k">明々後日</div><div class="v" id="dbg_show_d3">-</div></div>
+        </div>
+
+        <div class="debug-option">
+          <label>
+            <input id="dbg_use_plan" type="checkbox" checked>
+            粉で予定値を引く
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </div>
 
 <script>
 const el = (id) => document.getElementById(id);
+
+// 0はカット 1は正肉
+let karaage_niku = 0;
+let chibi_niku = 1;
+let shio_niku = 1;
+let umakara_niku = 0;
 
 const debugToggle = el("debugToggle");
 const debugPanel  = el("debugPanel");
@@ -795,19 +801,54 @@ function calcUmakara(){
 }
 
 function calcMeat(){
-  if(currentKaraShitami === null || currentUmakara === null){
-    cut_out.textContent = "-";
-  }else{
-    const cut = (currentKaraShitami / 2) + (currentUmakara / 2);
-    cut_out.textContent = String(cut);
+  let cut = 0;
+  let seiniku = 0;
+
+  let hasCut = false;
+  let hasSeiniku = false;
+
+  if(currentKaraShitami !== null){
+    if(karaage_niku === 0){
+      cut += currentKaraShitami / 2;
+      hasCut = true;
+    }else{
+      seiniku += currentKaraShitami / 2;
+      hasSeiniku = true;
+    }
   }
 
-  if(currentChibiShitami === null || currentShio === null){
-    seiniku_out.textContent = "-";
-  }else{
-    const seiniku = (currentChibiShitami / 2) + (currentShio / 2);
-    seiniku_out.textContent = String(seiniku);
+  if(currentChibiShitami !== null){
+    if(chibi_niku === 0){
+      cut += currentChibiShitami / 2;
+      hasCut = true;
+    }else{
+      seiniku += currentChibiShitami / 2;
+      hasSeiniku = true;
+    }
   }
+
+  if(currentShio !== null){
+    if(shio_niku === 0){
+      cut += currentShio / 2;
+      hasCut = true;
+    }else{
+      seiniku += currentShio / 2;
+      hasSeiniku = true;
+    }
+  }
+
+  if(currentUmakara !== null){
+    if(umakara_niku === 0){
+      cut += currentUmakara / 2;
+      hasCut = true;
+    }else{
+      seiniku += currentUmakara / 2;
+      hasSeiniku = true;
+    }
+  }
+
+  cut_out.textContent = hasCut ? String(cut) : "-";
+  seiniku_out.textContent = hasSeiniku ? String(seiniku) : "-";
 
   if(currentStick === null){
     mune_out.textContent = "-";
