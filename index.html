@@ -451,7 +451,7 @@ const el = (id) => document.getElementById(id);
 // 0はカット 1は正肉
 let karaage_niku = 0;
 let chibi_niku = 1;
-let shio_niku = 0;
+let shio_niku = 1;
 let umakara_niku = 0;
 
 const debugToggle = el("debugToggle");
@@ -635,11 +635,11 @@ function roundTo4Unit(n){
   if(n <= 0) return 0;
   if(n <= 2) return 0;
   if(n <= 5) return 4;
-  if(n <= 9) return 8;
-  if(n <= 13) return 12;
-  if(n <= 17) return 16;
-  if(n <= 21) return 20;
-  if(n <= 25) return 24;
+  if(n <= 10) return 8;
+  if(n <= 14) return 12;
+  if(n <= 18) return 16;
+  if(n <= 22) return 20;
+  if(n <= 26) return 24;
   if(n <= 29) return 28;
   if(n <= 33) return 32;
   if(n <= 37) return 36;
