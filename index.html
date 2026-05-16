@@ -632,11 +632,11 @@ function pk(d){ return (isWeekend(d)||isHoliday(d)) ? 8 : 4; }
 function pc(d){ return (isWeekend(d)||isHoliday(d)) ? 4 : 2; }
 
 function roundTo4Unit(n){
-  if(n <= 0) return 0;
-  if(n <= 2) return 0;
-  if(n <= 5) return 4;
-  if(n <= 10) return 8;
-  if(n <= 14) return 12;
+  if(n <= 0) return 0;  //0かそれ以下のものを0に
+  if(n <= 2) return 0;  //2かそれ以下のものを0に
+  if(n <= 6) return 4;  //6かそれ以下のものを4に
+  if(n <= 10) return 8; //10かそれ以下のものを8に
+  if(n <= 14) return 12; //14かそれ以下のものを12に
   if(n <= 18) return 16;
   if(n <= 22) return 20;
   if(n <= 26) return 24;
